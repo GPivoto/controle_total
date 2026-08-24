@@ -34,13 +34,14 @@ export class Navbar extends React.Component {
     }
   };
 
+  // === A MÁGICA ACONTECE AQUI ===
   handleHomeOrBackClick = () => {
-    const { disabled, onBackClick, history } = this.props;
+    const { disabled, onBackClick } = this.props;
 
-    if (disabled) {
-      history.push('/');
-    } else {
-      if (onBackClick) onBackClick();
+    // Se NÃO estiver na raiz (disabled = false) e a função de voltar existir, ele volta uma pasta.
+    // O redirecionamento para a Home (history.push('/')) foi completamente removido!
+    if (!disabled && onBackClick) {
+      onBackClick();
     }
   };
 
@@ -88,7 +89,7 @@ export class Navbar extends React.Component {
 
         <div className="Navbar__group Navbar__group--end">
           <React.Fragment>
-            {/* === NOSSO ID btn-tela-cheia AQUI (envolvido em uma div para garantir que o contorno e o clique funcionem) === */}
+            {/* === NOSSO ID btn-tela-cheia AQUI === */}
             {!isCordova() && (
               <div
                 id="btn-tela-cheia"
