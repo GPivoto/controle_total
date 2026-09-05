@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { injectIntl, intlShape } from 'react-intl';
 import { connect } from 'react-redux';
+import { withRouter } from 'react-router-dom'; // Ferramenta de navegação
 import keycode from 'keycode';
 import shortid from 'shortid';
 import messages from '../Board.messages';
@@ -30,26 +31,16 @@ function translateOutput(output, intl) {
 
 export class OutputContainer extends Component {
   static propTypes = {
-    /**
-     * @ignore
-     */
     intl: intlShape,
     clickOutput: PropTypes.func.isRequired,
-    /**
-     * Array of symbols
-     */
     output: PropTypes.arrayOf(
       PropTypes.shape({
-        /**
-         * Image to display
-         */
         image: PropTypes.string,
-        /**
-         * Label to display
-         */
         label: PropTypes.oneOfType([PropTypes.string, PropTypes.node])
       })
-    )
+    ),
+    history: PropTypes.object.isRequired,
+    location: PropTypes.object.isRequired
   };
 
   static getDerivedStateFromProps(props, state) {
@@ -64,16 +55,74 @@ export class OutputContainer extends Component {
     translatedOutput: []
   };
 
+  // === A MÁGICA DA VOLTA DO TECLADO ===
+  processarVoltaDoTeclado = () => {
+    const { location, history, changeOutput, output } = this.props;
+
+    if (
+      location &&
+      location.state &&
+      typeof location.state.textoFinal === 'string'
+    ) {
+      const { textoFinal, fraseAntiga } = location.state;
+
+      // Limpa o "radar" do React Router imediatamente para não entrar em loop infinito
+      history.replace({ ...location, state: undefined });
+      const imagemInvisivel =
+        'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCI+PC9zdmc+';
+
+      // Se o usuário digitou ou apagou alguma coisa
+      if (textoFinal !== fraseAntiga) {
+        if (textoFinal === '') {
+          // Se apagou tudo no teclado, limpa a barra
+          changeOutput([]);
+        } else if (textoFinal.startsWith(fraseAntiga)) {
+          // Se adicionou palavras no final, isola só a palavra nova num card texto
+          const textoAdicionado = textoFinal
+            .substring(fraseAntiga.length)
+            .trim();
+          if (textoAdicionado) {
+            const novoCardTexto = {
+              id: shortid.generate(),
+              label: textoAdicionado,
+              image: imagemInvisivel,
+              backgroundColor: 'rgb(255, 241, 118)' // Card Amarelinho
+            };
+            changeOutput([...output, novoCardTexto]);
+          }
+        } else {
+          // Se alterou no meio da frase, junta tudo num card gigante
+          const novoCardTexto = {
+            id: shortid.generate(),
+            label: textoFinal,
+            image: imagemInvisivel,
+            backgroundColor: 'rgb(255, 241, 118)'
+          };
+          changeOutput([novoCardTexto]);
+        }
+      }
+    }
+  };
+
   componentDidMount() {
     document.addEventListener('keydown', this.handleRepeatLastSpokenSentence);
-    document.addEventListener('keydown', this.handleSpeakShortcut); // Parte nova para reconhecer 'F' btao falar
+    document.addEventListener('keydown', this.handleSpeakShortcut);
+    this.processarVoltaDoTeclado(); // Checa na primeira vez que abre
   }
+
+  componentDidUpdate(prevProps) {
+    // Se o React atualizou a tela (veio do teclado) em vez de recarregar, nós checamos de novo!
+    if (this.props.location !== prevProps.location) {
+      this.processarVoltaDoTeclado();
+    }
+  }
+
   componentWillUnmount() {
     document.removeEventListener(
       'keydown',
       this.handleRepeatLastSpokenSentence
     );
-    document.removeEventListener('keydown', this.handleSpeakShortcut); // Parte nova para reconhecer 'F' btao falar
+    document.removeEventListener('keydown', this.handleSpeakShortcut);
   }
 
   outputReducer(accumulator, currentValue) {
@@ -111,6 +160,7 @@ export class OutputContainer extends Component {
       ? this.addLiveOutputTileClearOutput()
       : changeOutput(output);
   }
+
   async speakOutput(text) {
     this.props.clickOutput(text.trim());
     return new Promise(resolve => {
@@ -209,6 +259,17 @@ export class OutputContainer extends Component {
     return '';
   };
 
+  handleKeyboardClick = () => {
+    const phrase = this.handlePhraseToShare();
+    this.props.history.push({
+      pathname: '/',
+      state: {
+        frasePronta: phrase,
+        returnPath: this.props.location.pathname // Manda a pasta exata pros cards
+      }
+    });
+  };
+
   handleCopyClick = async () => {
     const { intl, showNotification } = this.props;
     const labels = this.props.output.map(symbol => symbol.label);
@@ -257,17 +318,14 @@ export class OutputContainer extends Component {
   };
 
   handleSpeakShortcut = event => {
-    console.log('Tecla pressionada:', event.key); // parte de debug para verificar se a tecla está sendo detectada
-    // evita ativar enquanto digita texto
     const target = event.target.tagName.toLowerCase();
-    if (target === 'input' || target === 'textarea') return; // Faz ignorar o comando quando estiver digitando em campos de texto
+    if (target === 'input' || target === 'textarea') return;
 
     if (event.key.toLowerCase() === 'f') {
-      console.log('Tecla F detectada!'); // parte de debug para verificar se a tecla está sendo detectada
       event.preventDefault();
       this.play();
     }
-  }; // Parte nova para reconhecer 'F' btao falar
+  };
 
   handleOutputClick = event => {
     const targetEl = event.target;
@@ -349,6 +407,7 @@ export class OutputContainer extends Component {
         onClick={isLiveMode ? undefined : this.handleOutputClick}
         onKeyDown={this.handleOutputKeyDown}
         onSwitchLiveMode={this.handleSwitchLiveMode}
+        onKeyboardClick={this.handleKeyboardClick}
         symbols={this.state.translatedOutput}
         isLiveMode={isLiveMode}
         tabIndex={tabIndex}
@@ -379,7 +438,9 @@ const mapDispatchToProps = {
   changeLiveMode
 };
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(injectIntl(OutputContainer));
+export default withRouter(
+  connect(
+    mapStateToProps,
+    mapDispatchToProps
+  )(injectIntl(OutputContainer))
+);

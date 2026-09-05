@@ -176,7 +176,12 @@ export class Board extends Component {
     const { board } = this.props;
 
     // Placas de identificação (IDs)
-    const zone0Buttons = ['btn-limpar', 'btn-falar', 'btn-apagar-um']; // Zona 0: Barra Branca
+    const zone0Buttons = [
+      'btn-limpar',
+      'btn-teclado',
+      'btn-falar',
+      'btn-apagar-um'
+    ]; // Zona 0: Barra Branca
     const zone1Buttons = ['btn-home', 'btn-tela-cheia']; // Zona 1: Barra Preta
 
     // Injeta visual azul nos botões do topo

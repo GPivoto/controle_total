@@ -3,16 +3,13 @@ import PropTypes from 'prop-types';
 
 import ClearIcon from '@material-ui/icons/Clear';
 import IconButton from '@material-ui/core/IconButton';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Switch from '@material-ui/core/Switch';
 import Button from '@material-ui/core/Button';
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
+import KeyboardIcon from '@material-ui/icons/Keyboard'; // NOVO: Ícone do Teclado
 import Symbol from '../../Symbol';
 import BackspaceButton from './BackspaceButton';
 import ClearButton from './ClearButton';
 import messages from '../../Board.messages';
-import PhraseShare from '../PhraseShare';
-/* import Scroll from './Scroll'; */
 import './SymbolOutput.css';
 import { injectIntl } from 'react-intl';
 
@@ -36,40 +33,29 @@ class SymbolOutput extends PureComponent {
   handleSpeakPhrase = () => {
     const { symbols } = this.props;
 
-    // Se não tiver nenhum card, não faz nada
     if (!symbols || symbols.length === 0) return;
 
-    // Pega as palavras de cada card e junta tudo em uma frase com espaços
     const phraseText = symbols.map(card => card.label).join(' ');
 
-    // Verifica se o navegador suporta a leitura de texto
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // Corta qualquer fala que esteja rolando para não encavalar
+      window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(phraseText);
-      utterance.lang = 'pt-BR'; // Força a voz em português brasileiro
-      utterance.rate = 0.9; // Velocidade um pouquinho mais lenta pra ficar compreensível
+      utterance.lang = 'pt-BR';
+      utterance.rate = 0.9;
 
       window.speechSynthesis.speak(utterance);
     }
   };
 
   static propTypes = {
-    /**
-     * Symbols to output
-     */
     symbols: PropTypes.arrayOf(
       PropTypes.shape({
-        /**
-         * Image to display
-         */
         image: PropTypes.string,
-        /**
-         * Label to display
-         */
         label: PropTypes.oneOfType([PropTypes.string, PropTypes.node])
       })
-    )
+    ),
+    onKeyboardClick: PropTypes.func // NOVO: Validando a nossa função do teclado
   };
 
   static defaultProps = {
@@ -109,10 +95,10 @@ class SymbolOutput extends PureComponent {
       onRemoveClick,
       onSwitchLiveMode,
       onWriteSymbol,
+      onKeyboardClick /* NOVO: Recebendo a função do OutputContainer */,
       symbols,
       navigationSettings,
       phrase,
-      /* isLiveMode, */
       increaseOutputButtons,
       ...other
     } = this.props;
@@ -120,10 +106,6 @@ class SymbolOutput extends PureComponent {
     const isLiveMode = false;
 
     const clearButtonStyle = {
-      visibility: symbols.length ? 'visible' : 'hidden'
-    };
-
-    const copyButtonStyle = {
       visibility: symbols.length ? 'visible' : 'hidden'
     };
 
@@ -196,7 +178,7 @@ class SymbolOutput extends PureComponent {
         </div>
 
         {/* =======================================================
-            3. DIREITA: Botão de Falar + Botão de Apagar Um
+            3. DIREITA: Botões de Controle (Teclado, Falar, Apagar)
             ======================================================= */}
         <div
           style={{
@@ -205,10 +187,28 @@ class SymbolOutput extends PureComponent {
             minWidth: 'fit-content',
             alignItems: 'center',
             paddingRight: '15px',
-            gap: '15px' // Dá um espacinho entre o botão de falar e o de apagar
+            gap: '15px'
           }}
         >
-          {/* NOSSO NOVO BOTÃO DE FALAR */}
+          {/* === NOSSO NOVO BOTÃO DE TECLADO === */}
+          <Button
+            id="btn-teclado"
+            variant="contained"
+            onClick={onKeyboardClick}
+            startIcon={<KeyboardIcon />}
+            style={{
+              backgroundColor: '#0055ff', // Azul para destacar que é navegação
+              color: 'white',
+              fontWeight: 'bold',
+              textTransform: 'none',
+              height: '48px',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.2)'
+            }}
+          >
+            Teclado
+          </Button>
+
           {symbols.length > 0 && (
             <Button
               id="btn-falar"
@@ -216,7 +216,7 @@ class SymbolOutput extends PureComponent {
               onClick={this.handleSpeakPhrase}
               startIcon={<VolumeUpIcon />}
               style={{
-                backgroundColor: '#4CAF50', // Verde bem chamativo e positivo
+                backgroundColor: '#4CAF50',
                 color: 'white',
                 fontWeight: 'bold',
                 textTransform: 'none',

@@ -1,42 +1,81 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { Button } from '@material-ui/core';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
 import './Home.css';
 
-// Layout do teclado interativo (4 linhas)
 const layoutTeclado = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ç'],
-  ['Z', 'X', 'C', 'V', 'B', 'N', 'M', 'ESPAÇO', 'APAGAR']
+  ['CAPS', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'ESPAÇO', 'APAGAR']
 ];
 
 export default function Home() {
   const history = useHistory();
-  const [mostrarTeclado, setMostrarTeclado] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(0); // 0 = Teclado, 1 = Cards
-  const [textoDigitado, setTextoDigitado] = useState('');
+  const location = useLocation();
 
-  // linhaSel: -1 representa a área superior (botões "← Voltar" e "🔊 Falar")
-  // topoColSel: 0 = "← Voltar", 1 = "🔊 Falar"
+  const [mostrarTeclado, setMostrarTeclado] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const [textoDigitado, setTextoDigitado] = useState('');
+  const [isCapslock, setIsCapslock] = useState(false);
+
+  // === NOVAS MEMÓRIAS ===
+  const [veioDosCards, setVeioDosCards] = useState(false);
+  const [fraseOriginal, setFraseOriginal] = useState('');
+  const [caminhoDeVolta, setCaminhoDeVolta] = useState('/board/main');
+
+  useEffect(
+    () => {
+      if (location.state && typeof location.state.frasePronta === 'string') {
+        const textoInicial = location.state.frasePronta
+          ? location.state.frasePronta + ' '
+          : '';
+
+        setFraseOriginal(location.state.frasePronta); // Salva a original sem o espaço extra
+        setCaminhoDeVolta(location.state.returnPath || '/board/main'); // Salva de qual pasta ele veio
+        setTextoDigitado(textoInicial);
+        setMostrarTeclado(true);
+        setVeioDosCards(true);
+
+        history.replace({ ...location, state: undefined });
+      }
+    },
+    [location, history]
+  );
+
+  const falarFrase = texto => {
+    if (!texto) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 0.9;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // === A MÁGICA DE VOLTAR COM O TEXTO ===
+  const fecharTeclado = () => {
+    if (veioDosCards) {
+      // Força a volta enviando o que ele digitou a mais!
+      history.push({
+        pathname: caminhoDeVolta,
+        state: {
+          textoFinal: textoDigitado.trim(),
+          fraseAntiga: fraseOriginal.trim()
+        }
+      });
+    } else {
+      setMostrarTeclado(false);
+      setLinhaSel(0);
+    }
+  };
+
   const [linhaSel, setLinhaSel] = useState(0);
   const [colSel, setColSel] = useState(0);
   const [topoColSel, setTopoColSel] = useState(0);
   const lastEnterTime = useRef(0);
 
-  // Função para sintetizar a frase montada em áudio
-  const falarFrase = texto => {
-    if (!texto) return;
-    window.speechSynthesis.cancel(); // Cancela falas anteriores
-    const utterance = new SpeechSynthesisUtterance(texto);
-    utterance.lang = 'pt-BR';
-    utterance.rate = 0.9; // Leitura pausada e limpa
-    window.speechSynthesis.speak(utterance);
-  };
-
-  // Escuta os eventos das teclas
   useEffect(
     () => {
       const handleKeyDown = event => {
@@ -48,19 +87,21 @@ export default function Home() {
           event.preventDefault();
         }
 
-        // --- NAVEGAÇÃO DENTRO DO TECLADO OVERLAY ---
         if (mostrarTeclado) {
           if (event.key === 'ArrowUp') {
             if (linhaSel === -1) {
-              // Se está no topo (Voltar ou Falar), vai para a última linha do teclado
-              const novaLinha = layoutTeclado.length - 1;
-              setLinhaSel(novaLinha);
-              setColSel(prev =>
-                Math.min(prev, layoutTeclado[novaLinha].length - 1)
-              );
+              if (topoColSel === 1) {
+                setTopoColSel(0);
+              } else {
+                const novaLinha = layoutTeclado.length - 1;
+                setLinhaSel(novaLinha);
+                setColSel(prev =>
+                  Math.min(prev, layoutTeclado[novaLinha].length - 1)
+                );
+              }
             } else if (linhaSel === 0) {
-              // Se está na primeira linha (1, 2, 3...), sobe para o topo
               setLinhaSel(-1);
+              setTopoColSel(1);
             } else {
               const novaLinha = linhaSel - 1;
               setLinhaSel(novaLinha);
@@ -70,12 +111,15 @@ export default function Home() {
             }
           } else if (event.key === 'ArrowDown') {
             if (linhaSel === -1) {
-              // Se está no topo (Voltar ou Falar), desce para a primeira linha do teclado
-              setLinhaSel(0);
-              setColSel(prev => Math.min(prev, layoutTeclado[0].length - 1));
+              if (topoColSel === 0) {
+                setTopoColSel(1);
+              } else {
+                setLinhaSel(0);
+                setColSel(prev => Math.min(prev, layoutTeclado[0].length - 1));
+              }
             } else if (linhaSel === layoutTeclado.length - 1) {
-              // Se está na última linha, sobe para o topo
               setLinhaSel(-1);
+              setTopoColSel(0);
             } else {
               const novaLinha = linhaSel + 1;
               setLinhaSel(novaLinha);
@@ -85,7 +129,6 @@ export default function Home() {
             }
           } else if (event.key === 'ArrowLeft') {
             if (linhaSel === -1) {
-              // No topo: alterna entre Falar (1) e Voltar (0)
               setTopoColSel(prev => (prev === 1 ? 0 : 1));
             } else {
               const totalColunas = layoutTeclado[linhaSel].length;
@@ -93,7 +136,6 @@ export default function Home() {
             }
           } else if (event.key === 'ArrowRight') {
             if (linhaSel === -1) {
-              // No topo: alterna entre Voltar (0) e Falar (1)
               setTopoColSel(prev => (prev === 0 ? 1 : 0));
             } else {
               const totalColunas = layoutTeclado[linhaSel].length;
@@ -102,29 +144,31 @@ export default function Home() {
           } else if (event.key === 'Enter') {
             if (linhaSel === -1) {
               if (topoColSel === 0) {
-                // Enter no botão "← Voltar"
-                setMostrarTeclado(false);
-                setLinhaSel(0);
+                fecharTeclado();
               } else if (topoColSel === 1) {
-                // Enter no botão "🔊 Falar" -> Executa a leitura da frase
                 falarFrase(textoDigitado);
               }
             } else {
-              // Enter em uma tecla do teclado
               const tecla = layoutTeclado[linhaSel][colSel];
-              if (tecla === 'ESPAÇO') {
+
+              if (tecla === 'CAPS') {
+                setIsCapslock(prev => !prev);
+              } else if (tecla === 'ESPAÇO') {
                 setTextoDigitado(prev => prev + ' ');
               } else if (tecla === 'APAGAR') {
                 setTextoDigitado(prev => prev.slice(0, -1));
               } else {
-                setTextoDigitado(prev => prev + tecla);
+                const caractere =
+                  !isCapslock && /^[A-ZÇ]$/.test(tecla)
+                    ? tecla.toLowerCase()
+                    : tecla;
+                setTextoDigitado(prev => prev + caractere);
               }
             }
           }
           return;
         }
 
-        // --- NAVEGAÇÃO NA TELA HOME ORIGINAL ---
         if (event.key === 'Enter') {
           const agora = Date.now();
           if (agora - lastEnterTime.current < 400) return;
@@ -153,11 +197,14 @@ export default function Home() {
       colSel,
       topoColSel,
       textoDigitado,
-      history
+      history,
+      isCapslock,
+      veioDosCards,
+      fraseOriginal,
+      caminhoDeVolta
     ]
   );
 
-  // Estilo do foco nos botões da Home
   const getButtonStyle = index => {
     const isFocused = focusedIndex === index;
     return isFocused
@@ -175,7 +222,6 @@ export default function Home() {
   return (
     <div className="home-container">
       <h1 className="home-title">Controle Total</h1>
-
       <div className="home-button-group">
         <Button
           variant="contained"
@@ -191,7 +237,6 @@ export default function Home() {
         >
           Teclado
         </Button>
-
         <Button
           variant="contained"
           className="home-button"
@@ -203,7 +248,6 @@ export default function Home() {
         </Button>
       </div>
 
-      {/* MODAL DO TECLADO OVERLAY */}
       {mostrarTeclado && (
         <div
           style={{
@@ -212,7 +256,7 @@ export default function Home() {
             left: 0,
             width: '100vw',
             height: '100vh',
-            backgroundColor: '#0a2540',
+            background: 'linear-gradient(180deg, #a2e9f3 0%, #76d7e5 100%)',
             zIndex: 999999,
             display: 'flex',
             flexDirection: 'column',
@@ -221,12 +265,8 @@ export default function Home() {
             padding: '20px'
           }}
         >
-          {/* BOTÃO VOLTAR (linhaSel === -1 && topoColSel === 0) */}
           <button
-            onClick={() => {
-              setMostrarTeclado(false);
-              setLinhaSel(0);
-            }}
+            onClick={fecharTeclado}
             style={{
               position: 'absolute',
               top: '20px',
@@ -253,12 +293,17 @@ export default function Home() {
           >
             ← Voltar
           </button>
-
-          <h2 style={{ marginBottom: '20px', color: '#ffffff' }}>
+          <h2
+            style={{
+              marginBottom: '20px',
+              color: '#0a2540', // Azul escuro para dar contraste
+              fontSize: '32px', // Um pouquinho maior
+              fontWeight: '900', // Bem gordinho/destacado
+              textShadow: '1px 1px 3px rgba(0,0,0,0.15)' // Sombra sutil para descolar do fundo
+            }}
+          >
             Teclado Interativo
           </h2>
-
-          {/* ÁREA DE EXIBIÇÃO DO TEXTO + BOTÃO FALAR */}
           <div
             style={{
               display: 'flex',
@@ -288,8 +333,6 @@ export default function Home() {
                 </span>
               )}
             </div>
-
-            {/* BOTÃO FALAR (linhaSel === -1 && topoColSel === 1) */}
             <button
               onClick={() => falarFrase(textoDigitado)}
               style={{
@@ -316,8 +359,6 @@ export default function Home() {
               🔊 Falar
             </button>
           </div>
-
-          {/* TECLADO DE TECLAS */}
           <div
             style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
           >
@@ -333,6 +374,11 @@ export default function Home() {
                 {linha.map((tecla, cIndex) => {
                   const estaSelecionada =
                     linhaSel === lIndex && colSel === cIndex;
+                  let labelTecla = tecla;
+                  if (tecla === 'CAPS')
+                    labelTecla = isCapslock ? '⬆ MAIÚS' : '⬇ minús';
+                  else if (!isCapslock && /^[A-ZÇ]$/.test(tecla))
+                    labelTecla = tecla.toLowerCase();
                   return (
                     <button
                       key={cIndex}
@@ -352,7 +398,7 @@ export default function Home() {
                         fontWeight: estaSelecionada ? 'bold' : 'normal'
                       }}
                     >
-                      {tecla}
+                      {labelTecla}
                     </button>
                   );
                 })}
