@@ -3,6 +3,7 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { Button } from '@material-ui/core';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
+import SettingsIcon from '@material-ui/icons/Settings';
 import './Home.css';
 
 const layoutTeclado = [
@@ -171,19 +172,25 @@ export default function Home() {
 
         if (event.key === 'Enter') {
           const agora = Date.now();
+
           if (agora - lastEnterTime.current < 400) return;
+
           lastEnterTime.current = agora;
 
           if (focusedIndex === 0) {
+            history.push('/settings/voice');
+          } else if (focusedIndex === 1) {
             setMostrarTeclado(true);
             setLinhaSel(0);
             setColSel(0);
             setTopoColSel(0);
-          } else if (focusedIndex === 1) {
+          } else if (focusedIndex === 2) {
             history.push('/board/cards');
           }
-        } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
-          setFocusedIndex(prevIndex => (prevIndex === 0 ? 1 : 0));
+        } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+          setFocusedIndex(prevIndex => (prevIndex < 2 ? prevIndex + 1 : 0));
+        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+          setFocusedIndex(prevIndex => (prevIndex > 0 ? prevIndex - 1 : 2));
         }
       };
 
@@ -222,6 +229,31 @@ export default function Home() {
   return (
     <div className="home-container">
       <h1 className="home-title">Controle Total</h1>
+
+      <Button
+        variant="contained"
+        startIcon={<SettingsIcon />}
+        onClick={() => history.push('/settings/voice')}
+        style={{
+          position: 'fixed',
+          top: '30px',
+          left: '30px',
+          zIndex: 9999,
+          border: focusedIndex === 0 ? '4px solid #ffcc00' : 'none',
+          transform: focusedIndex === 0 ? 'scale(1.1)' : 'scale(1)',
+          transition: 'all 0.1s ease',
+          backgroundColor: '#00bcd4',
+          color: '#ffffff',
+          borderRadius: '50px',
+          padding: '12px 25px',
+          fontSize: '1.2rem',
+          textTransform: 'none',
+          boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)'
+        }}
+      >
+        Configurações
+      </Button>
+
       <div className="home-button-group">
         <Button
           variant="contained"
@@ -233,7 +265,7 @@ export default function Home() {
             setColSel(0);
             setTopoColSel(0);
           }}
-          style={getButtonStyle(0)}
+          style={getButtonStyle(1)}
         >
           Teclado
         </Button>
@@ -242,7 +274,7 @@ export default function Home() {
           className="home-button"
           startIcon={<VolumeUpIcon />}
           onClick={() => history.push('/board/cards')}
-          style={getButtonStyle(1)}
+          style={getButtonStyle(2)}
         >
           Cards
         </Button>
