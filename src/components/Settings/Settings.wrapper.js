@@ -6,6 +6,7 @@ import People from './People';
 import Subscribe from './Subscribe';
 import Language from './Language';
 import Speech from './Speech';
+import VoiceSelector from './VoiceSelector/VoiceSelector.component';
 import Export from './Export';
 import Import from './Import';
 import Display from './Display';
@@ -17,12 +18,13 @@ import Symbols from './Symbols';
 
 const SettingsWrapper = ({ match }) => (
   <Fragment>
-    <Route exact component={Settings} />
+    <Route exact path={match.url} component={Settings} />
     <Switch>
       <Route path={`${match.url}/people`} component={People} />
       <Route path={`${match.url}/subscribe`} component={Subscribe} />
       <Route path={`${match.url}/language`} component={Language} />
       <Route path={`${match.url}/speech`} component={Speech} />
+      <Route path={`${match.url}/voice`} component={VoiceSelector} />
       <Route path={`${match.url}/export`} component={Export} />
       <Route path={`${match.url}/import`} component={Import} />
       <Route path={`${match.url}/display`} component={Display} />
