@@ -53,3 +53,5 @@ yarn-error.log*
 /tests/playwright-report/
 /tests/blob-report/
 /tests/playwright/.cache/
+.vercel
+.env*
