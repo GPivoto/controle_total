@@ -1,11 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { connect } from 'react-redux';
 import { Button } from '@material-ui/core';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
+import {
+  changeVoice,
+  changePitch,
+  changeRate
+} from '../../../providers/SpeechProvider/SpeechProvider.actions';
 
 import './VoiceSelector.css';
 
-const VoiceSelector = ({ history }) => {
+const VoiceSelector = ({ history, dispatch }) => {
   const [selectedVoice, setSelectedVoice] = useState(0);
   const [systemVoices, setSystemVoices] = useState([]);
 
@@ -72,6 +78,8 @@ const VoiceSelector = ({ history }) => {
     );
 
     let vozEscolhida = null;
+    let pitch = 1;
+    let rate = 0.9;
 
     if (index === 1) {
       // Voz masculina
@@ -79,8 +87,8 @@ const VoiceSelector = ({ history }) => {
         voice => voice.name === 'Microsoft Daniel - Portuguese (Brazil)'
       );
 
-      utterance.pitch = 1;
-      utterance.rate = 0.9;
+      pitch = 1;
+      rate = 0.9;
     }
 
     if (index === 2) {
@@ -89,8 +97,8 @@ const VoiceSelector = ({ history }) => {
         voice => voice.name === 'Microsoft Maria - Portuguese (Brazil)'
       );
 
-      utterance.pitch = 1.25;
-      utterance.rate = 1.08;
+      pitch = 1.25;
+      rate = 1.08;
     }
 
     if (index === 3) {
@@ -99,8 +107,8 @@ const VoiceSelector = ({ history }) => {
         voice => voice.name === 'Microsoft Daniel - Portuguese (Brazil)'
       );
 
-      utterance.pitch = 2.0;
-      utterance.rate = 2.75;
+      pitch = 2.0;
+      rate = 2.75;
     }
 
     if (index === 4) {
@@ -109,13 +117,20 @@ const VoiceSelector = ({ history }) => {
         voice => voice.name === 'Microsoft Maria - Portuguese (Brazil)'
       );
 
-      utterance.pitch = 2.5;
-      utterance.rate = 3.0;
+      pitch = 2.5;
+      rate = 3.0;
     }
 
     if (vozEscolhida) {
       utterance.voice = vozEscolhida;
       utterance.lang = vozEscolhida.lang;
+      utterance.pitch = pitch;
+      utterance.rate = rate;
+
+      // Salva a voz escolhida no sistema de fala do aplicativo
+      dispatch(changeVoice(vozEscolhida.voiceURI, vozEscolhida.lang));
+      dispatch(changePitch(pitch));
+      dispatch(changeRate(rate));
     } else {
       console.log('Voz não encontrada para a opção:', index);
       utterance.lang = 'pt-BR';
@@ -262,4 +277,4 @@ const VoiceSelector = ({ history }) => {
   );
 };
 
-export default VoiceSelector;
+export default connect()(VoiceSelector);

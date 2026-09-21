@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { connect } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Button } from '@material-ui/core';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
 import SettingsIcon from '@material-ui/icons/Settings';
+import {
+  speak,
+  cancelSpeech
+} from '../../providers/SpeechProvider/SpeechProvider.actions';
 import './Home.css';
 
 const layoutTeclado = [
@@ -13,7 +18,7 @@ const layoutTeclado = [
   ['CAPS', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'ESPAÇO', 'APAGAR']
 ];
 
-export default function Home() {
+function Home({ dispatch }) {
   const history = useHistory();
   const location = useLocation();
 
@@ -48,11 +53,9 @@ export default function Home() {
 
   const falarFrase = texto => {
     if (!texto) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(texto);
-    utterance.lang = 'pt-BR';
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
+
+    dispatch(cancelSpeech());
+    dispatch(speak(texto));
   };
 
   // === A MÁGICA DE VOLTAR COM O TEXTO ===
@@ -442,3 +445,5 @@ export default function Home() {
     </div>
   );
 }
+
+export default connect()(Home);
