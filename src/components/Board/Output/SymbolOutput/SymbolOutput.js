@@ -5,7 +5,7 @@ import ClearIcon from '@material-ui/icons/Clear';
 import IconButton from '@material-ui/core/IconButton';
 import Button from '@material-ui/core/Button';
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
-import KeyboardIcon from '@material-ui/icons/Keyboard'; // NOVO: Ícone do Teclado
+import KeyboardIcon from '@material-ui/icons/Keyboard';
 import Symbol from '../../Symbol';
 import BackspaceButton from './BackspaceButton';
 import ClearButton from './ClearButton';
@@ -30,21 +30,17 @@ class SymbolOutput extends PureComponent {
     this.setState({ openPhraseShareDialog: false });
   };
 
+  // === AQUI ESTÁ A CORREÇÃO! ===
+  // Agora o botão do mouse avisa o "pai" (OutputContainer) para usar o Redux!
   handleSpeakPhrase = () => {
-    const { symbols } = this.props;
+    const { symbols, onClick } = this.props;
 
     if (!symbols || symbols.length === 0) return;
 
-    const phraseText = symbols.map(card => card.label).join(' ');
-
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(phraseText);
-      utterance.lang = 'pt-BR';
-      utterance.rate = 0.9;
-
-      window.speechSynthesis.speak(utterance);
+    if (onClick) {
+      // Disparamos um evento simulado para o pai, ativando a mesma
+      // função global "play()" que o teclado/Arduino já usa!
+      onClick({ target: { tagName: 'div' } });
     }
   };
 
@@ -55,7 +51,8 @@ class SymbolOutput extends PureComponent {
         label: PropTypes.oneOfType([PropTypes.string, PropTypes.node])
       })
     ),
-    onKeyboardClick: PropTypes.func // NOVO: Validando a nossa função do teclado
+    onKeyboardClick: PropTypes.func,
+    onClick: PropTypes.func // Garantindo que o onClick do pai seja reconhecido
   };
 
   static defaultProps = {
@@ -95,7 +92,7 @@ class SymbolOutput extends PureComponent {
       onRemoveClick,
       onSwitchLiveMode,
       onWriteSymbol,
-      onKeyboardClick /* NOVO: Recebendo a função do OutputContainer */,
+      onKeyboardClick,
       symbols,
       navigationSettings,
       phrase,
@@ -119,9 +116,6 @@ class SymbolOutput extends PureComponent {
 
     return (
       <div className="SymbolOutput">
-        {/* =======================================================
-            1. ESQUERDA: Botão de Apagar Tudo isolado
-            ======================================================= */}
         <div
           style={{ display: 'flex', alignItems: 'center', padding: '0 10px' }}
         >
@@ -135,9 +129,6 @@ class SymbolOutput extends PureComponent {
           />
         </div>
 
-        {/* =======================================================
-            2. CENTRO: A nossa div dos Cards que rolam pra baixo
-            ======================================================= */}
         <div
           className="SymbolOutput__cards-container"
           ref={this.scrollContainerRef}
@@ -177,9 +168,6 @@ class SymbolOutput extends PureComponent {
           ))}
         </div>
 
-        {/* =======================================================
-            3. DIREITA: Botões de Controle (Teclado, Falar, Apagar)
-            ======================================================= */}
         <div
           style={{
             display: 'flex',
@@ -190,14 +178,13 @@ class SymbolOutput extends PureComponent {
             gap: '15px'
           }}
         >
-          {/* === NOSSO NOVO BOTÃO DE TECLADO === */}
           <Button
             id="btn-teclado"
             variant="contained"
             onClick={onKeyboardClick}
             startIcon={<KeyboardIcon />}
             style={{
-              backgroundColor: '#0055ff', // Azul para destacar que é navegação
+              backgroundColor: '#0055ff',
               color: 'white',
               fontWeight: 'bold',
               textTransform: 'none',
@@ -213,7 +200,7 @@ class SymbolOutput extends PureComponent {
             <Button
               id="btn-falar"
               variant="contained"
-              onClick={this.handleSpeakPhrase}
+              onClick={this.handleSpeakPhrase} // Agora aciona o Redux através do pai!
               startIcon={<VolumeUpIcon />}
               style={{
                 backgroundColor: '#4CAF50',
