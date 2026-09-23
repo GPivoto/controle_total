@@ -7,6 +7,7 @@ import VolumeUpIcon from '@material-ui/icons/VolumeUp';
 import SettingsIcon from '@material-ui/icons/Settings';
 import HistoryIcon from '@material-ui/icons/History';
 import DeleteIcon from '@material-ui/icons/Delete';
+import iconeCadeira from './cadeira.png';
 import {
   speak,
   cancelSpeech
@@ -356,7 +357,28 @@ function Home({ dispatch, output }) {
         `}
       </style>
 
-      <h1 className="home-title">Controle Total</h1>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '20px',
+          marginBottom: '60px'
+        }}
+      >
+        <img
+          src={iconeCadeira}
+          alt="Ícone Cadeira de Rodas"
+          style={{
+            width: '100px',
+            height: 'auto',
+            filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.15))'
+          }}
+        />
+        <h1 className="home-title" style={{ margin: 0 }}>
+          Controle Total
+        </h1>
+      </div>
 
       <Button
         variant="contained"
